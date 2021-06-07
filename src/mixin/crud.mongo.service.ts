@@ -5,21 +5,26 @@ const DbService = require("moleculer-db");
 import { FindProps, GetProps } from "ale-base-model";
 import { DEFAULT_PAGE_SIZE } from "ale-base-model/dist/models/Paging";
 import { Context, ServiceSchema } from "moleculer";
+import { DbServiceSettings } from "moleculer-db";
 import { v4 as uuidv4 } from "uuid";
 import { mongoQueryHelper } from "../helper/MongoQueryHelper";
 
-const nomalizationId = (object: any) => ({ ...object, id: object._id });
-const nomalizationIds = (objects: any[]) =>
-	objects != null ? objects.map((obj: any) => nomalizationId(obj)) : [];
-
-const crudMongoMixin: any = {
+const crudMongoMixin: ServiceSchema<DbServiceSettings> = {
 	name: "crud-mongo",
 	mixins: [DbService],
+	settings: {
+		idField: "id",
+	},
 	actions: {
-		filter(ctx: Context) {
-			return this._customList(ctx);
+		filter: {
+			rest: {
+				method: "POST",
+				path: "/filter",
+			},
+			async handler(ctx: Context): Promise<string> {
+				return this._customList(ctx);
+			},
 		},
-
 		create(ctx: Context) {
 			return this._customCreate(ctx);
 		},
@@ -59,10 +64,7 @@ const crudMongoMixin: any = {
 				limit,
 				query: { ...combinedQueries, isDeleted: "false" },
 			};
-			return this._find(ctx, params).then((pagination: any) => ({
-				...pagination,
-				rows: nomalizationIds(pagination.rows),
-			}));
+			return this._find(ctx, params);
 		},
 
 		_customGet(ctx: Context<GetProps<any>>) {
@@ -80,15 +82,12 @@ const crudMongoMixin: any = {
 			return this._get(ctx, params)
 				.then((value: any) => {
 					if (Array.isArray(params.id)) {
-						return nomalizationIds(
-							value.filter(
-								(v: any) =>
-									!v.isDeleted || v.isDeleted === false
-							)
+						return value.filter(
+							(v: any) => !v.isDeleted || v.isDeleted === false
 						);
 					} else {
 						if (!value.isDeleted || value.isDeleted === false) {
-							return nomalizationId(value);
+							return value;
 						} else {
 							throw new Error(
 								`Entity with id ${value.id} it not existed`
@@ -173,13 +172,10 @@ const crudMongoMixin: any = {
 				limit: pageSize,
 				query: { ...combinedQueries, isDeleted: false },
 			};
-			console.log({params: JSON.stringify(params)});
+			console.log({ params: JSON.stringify(params) });
 			delete params.search;
 
-			return this._list(ctx, params).then((pagination: any) => ({
-				...pagination,
-				rows: nomalizationIds(pagination.rows),
-			}));
+			return this._list(ctx, params);
 		},
 
 		_customRemove(ctx: Context<any>) {
