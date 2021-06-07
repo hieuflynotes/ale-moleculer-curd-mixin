@@ -1,6 +1,6 @@
 {
   "name": "ale-moleculer-crud-mixin",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "My Moleculer-based microservices project",
   "files": [
     "dist/"
